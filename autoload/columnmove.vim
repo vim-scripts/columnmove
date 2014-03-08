@@ -42,7 +42,7 @@ function! columnmove#f(mode, ...)
   let l:count = (a:0 > 1 && a:2 > 0) ? a:2 : v:count1
 
   " re-entering to the visual mode (if necessary)
-  if a:mode ==# 'x'
+  if (a:mode ==# 'x') && ((mode() !=? 'v') && (mode() != "\<C-v>"))
     normal! gv
   endif
 
@@ -63,7 +63,7 @@ function! columnmove#t(mode, ...)
   let l:count = (a:0 > 1 && a:2 > 0) ? a:2 : v:count1
 
   " re-entering to the visual mode (if necessary)
-  if a:mode ==# 'x'
+  if (a:mode ==# 'x') && ((mode() !=? 'v') && (mode() != "\<C-v>"))
     normal! gv
   endif
 
@@ -84,7 +84,7 @@ function! columnmove#F(mode, ...)
   let l:count = (a:0 > 1 && a:2 > 0) ? a:2 : v:count1
 
   " re-entering to the visual mode (if necessary)
-  if a:mode ==# 'x'
+  if (a:mode ==# 'x') && ((mode() !=? 'v') && (mode() != "\<C-v>"))
     normal! gv
   endif
 
@@ -105,7 +105,7 @@ function! columnmove#T(mode, ...)
   let l:count = (a:0 > 1 && a:2 > 0) ? a:2 : v:count1
 
   " re-entering to the visual mode (if necessary)
-  if a:mode ==# 'x'
+  if (a:mode ==# 'x') && ((mode() !=? 'v') && (mode() != "\<C-v>"))
     normal! gv
   endif
 
@@ -174,7 +174,7 @@ function! columnmove#w(mode, ...)
   let l:count = (a:0 > 0 && a:1 > 0) ? a:1 : v:count1
 
   " re-entering to the visual mode (if necessary)
-  if a:mode ==# 'x'
+  if (a:mode ==# 'x') && ((mode() !=? 'v') && (mode() != "\<C-v>"))
     normal! gv
   endif
 
@@ -192,7 +192,7 @@ function! columnmove#b(mode, ...)
   let l:count = (a:0 > 0 && a:1 > 0) ? a:1 : v:count1
 
   " re-entering to the visual mode (if necessary)
-  if a:mode ==# 'x'
+  if (a:mode ==# 'x') && ((mode() !=? 'v') && (mode() != "\<C-v>"))
     normal! gv
   endif
 
@@ -210,7 +210,7 @@ function! columnmove#e(mode, ...)
   let l:count = (a:0 > 0 && a:1 > 0) ? a:1 : v:count1
 
   " re-entering to the visual mode (if necessary)
-  if a:mode ==# 'x'
+  if (a:mode ==# 'x') && ((mode() !=? 'v') && (mode() != "\<C-v>"))
     normal! gv
   endif
 
@@ -228,7 +228,7 @@ function! columnmove#ge(mode, ...)
   let l:count = (a:0 > 0 && a:1 > 0) ? a:1 : v:count1
 
   " re-entering to the visual mode (if necessary)
-  if a:mode ==# 'x'
+  if (a:mode ==# 'x') && ((mode() !=? 'v') && (mode() != "\<C-v>"))
     normal! gv
   endif
 
@@ -340,7 +340,7 @@ function! s:columnmove_ftFT(kind, mode, char, count, options_dict, command) "{{{
 
   let opt_raw = s:check_raw(a:options_dict)
 
-  if !opt_raw
+  if opt_raw != 1
     let output = ''
     if dest[0] > 0
       if a:mode =~# '[nxo]'
@@ -355,7 +355,9 @@ function! s:columnmove_ftFT(kind, mode, char, count, options_dict, command) "{{{
         call cursor(dest[1])
       endif
     endif
-  else
+  endif
+
+  if opt_raw
     let output = {'displacement' : dest[0], 'destination' : dest[1], 'opened_fold' : dest[2]}
   endif
 
@@ -376,12 +378,16 @@ function! s:get_dest_ftFT(kind, currentline, col, count, options_dict)  "{{{
   let opt_expand_range   = s:user_conf(  'expand_range', a:options_dict, 0)
   let opt_auto_scroll    = s:user_conf(   'auto_scroll', a:options_dict, 0)
 
+  if type(opt_fold_open) == s:type_dict
+    let opt_fold_open = get(opt_fold_open, a:mode, 0)
+  endif
+
   " gather buffer lines
   if a:kind =~# '[ft]'
     " down
     if opt_auto_scroll
-      let los       = s:line_position_on_the_screen(a:currentline)
-      let room      = los - &scrolloff - 1
+      let los  = screenrow()
+      let room = los - &scrolloff - 1
 
       if room > 0
         execute "normal! " . room . "\<C-e>"
@@ -407,7 +413,7 @@ function! s:get_dest_ftFT(kind, currentline, col, count, options_dict)  "{{{
     " up
     if opt_auto_scroll
       let winheight = winheight(0)
-      let los       = s:line_position_on_the_screen(a:currentline)
+      let los       = screenrow()
       let room      = winheight - los - &scrolloff
 
       if room > 0
@@ -545,6 +551,10 @@ function! s:get_dest_ftFT_with_char(kind, c, currentline, col, count, options_di
   let opt_expand_range   = s:user_conf(  'expand_range', a:options_dict, 0)
   let opt_auto_scroll    = s:user_conf(   'auto_scroll', a:options_dict, 0)
 
+  if type(opt_fold_open) == s:type_dict
+    let opt_fold_open = get(opt_fold_open, a:mode, 0)
+  endif
+
   " update history
   if opt_update_history
     let s:search_history = [a:kind, a:c]
@@ -554,8 +564,8 @@ function! s:get_dest_ftFT_with_char(kind, c, currentline, col, count, options_di
   if a:kind =~# '[ft]'
     " down
     if opt_auto_scroll
-      let los       = s:line_position_on_the_screen(a:currentline)
-      let room      = los - &scrolloff - 1
+      let los  = screenrow()
+      let room = los - &scrolloff - 1
 
       if room > 0
         execute "normal! " . room . "\<C-e>"
@@ -581,7 +591,7 @@ function! s:get_dest_ftFT_with_char(kind, c, currentline, col, count, options_di
     " up
     if opt_auto_scroll
       let winheight = winheight(0)
-      let los       = s:line_position_on_the_screen(a:currentline)
+      let los       = screenrow()
       let room      = winheight - los - &scrolloff
 
       if room > 0
@@ -684,23 +694,6 @@ function! s:highlight_del(id) "{{{
   return
 endfunction
 "}}}
-function! s:line_position_on_the_screen(line)  "{{{
-  let current = line('w0')
-  let pos = 1
-
-  while current < a:line
-    let closed_end  = foldclosedend(current)
-    let pos += 1
-    if closed_end < 0
-      let current += 1
-    else
-      let current = closed_end + 1
-    endif
-  endwhile
-
-  return pos
-endfunction
-"}}}
 
 " vertical w, b, e, ge
 function! s:columnmove_wbege(kind, mode, count, options_dict, command) "{{{
@@ -713,6 +706,10 @@ function! s:columnmove_wbege(kind, mode, count, options_dict, command) "{{{
   let opt_strict_wbege   = s:user_conf(  'strict_wbege', a:options_dict, 0)
   let opt_fold_treatment = s:user_conf('fold_treatment', a:options_dict, 0)
   let opt_raw            = s:check_raw(a:options_dict)
+
+  if type(opt_fold_open) == s:type_dict
+    let opt_fold_open = get(opt_fold_open, a:mode, 0)
+  endif
 
   if opt_strict_wbege
     if a:kind =~# '\%(w\|ge\)'
@@ -728,7 +725,7 @@ function! s:columnmove_wbege(kind, mode, count, options_dict, command) "{{{
     endif
   endif
 
-  if !opt_raw
+  if opt_raw != 1
     let output = ''
     if dest[0] > 0
       if a:mode =~# '[nxo]'
@@ -743,7 +740,9 @@ function! s:columnmove_wbege(kind, mode, count, options_dict, command) "{{{
         call cursor(dest[1])
       endif
     endif
-  else
+  endif
+
+  if opt_raw
     let output = {'displacement' : dest[0], 'destination' : dest[1], 'opened_fold' : dest[2]}
   endif
 
