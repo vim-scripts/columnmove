@@ -3,10 +3,10 @@ This is a mirror of http://www.vim.org/scripts/script.php?script_id=4880
 columnmove serves you several keymappings specialized for moving cursor in vertical direction.
 
 *** columnmove-f and its variants ***
-columnmove-f and its variants are the commands for bringing cursor to the position assigned by a character in the same column. This group has six keymappings, that is, \"columnmove-f\", \"columnmove-t\", \"columnmove-F\", \"columnmove-T\", \"columnmove-;\", \"columnmove-,\".  Each of them are the imitations of \"f\", \"t\", \"F\", \"T\", \";\", \",\" command, but work in vertical direction, not in line-wise.
+columnmove-f and its variants are the commands for bringing cursor to the position assigned by a character in the same column. This group has six keymappings, that is, "columnmove-f", "columnmove-t", "columnmove-F", "columnmove-T", "columnmove-;", "columnmove-,".  Each of them are the imitations of "f", "t", "F", "T", ";", "," command, but work in vertical direction, not in line-wise.
 
 *** columnmove-w and its variants ***
-columnmove-w and its variants are the commands for moving cursor in word-wise. This group has four keymappings, that is, \"columnmove-w\", columnmove-b, \"columnmove-e\", \"columnmove-ge\". Each of them are the imitations of \"w\", \"b\", \"e\", \"ge\", but work in vertical direction. These commands regard the column which cursor is on as a line and search for the head or tail of word to move.
+columnmove-w and its variants are the commands for moving cursor in word-wise. This group has four keymappings, that is, "columnmove-w", "columnmove-b", "columnmove-e", "columnmove-ge". Each of them are the imitations of "w", "b", "e", "ge", but work in vertical direction. These commands regard the column which cursor is on as a line and search for the head or tail of word to move.
 
 Latest version : https://github.com/machakann/vim-columnmove
 

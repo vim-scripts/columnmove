@@ -386,8 +386,7 @@ function! s:get_dest_ftFT(kind, currentline, col, count, options_dict)  "{{{
   if a:kind =~# '[ft]'
     " down
     if opt_auto_scroll
-      let los  = screenrow()
-      let room = los - &scrolloff - 1
+      let room = screenrow() - &scrolloff - 1
 
       if room > 0
         execute "normal! " . room . "\<C-e>"
@@ -413,8 +412,7 @@ function! s:get_dest_ftFT(kind, currentline, col, count, options_dict)  "{{{
     " up
     if opt_auto_scroll
       let winheight = winheight(0)
-      let los       = screenrow()
-      let room      = winheight - los - &scrolloff
+      let room      = winheight - screenrow() - &scrolloff
 
       if room > 0
         execute "normal! " . room . "\<C-y>"
@@ -564,8 +562,7 @@ function! s:get_dest_ftFT_with_char(kind, c, currentline, col, count, options_di
   if a:kind =~# '[ft]'
     " down
     if opt_auto_scroll
-      let los  = screenrow()
-      let room = los - &scrolloff - 1
+      let room = screenrow() - &scrolloff - 1
 
       if room > 0
         execute "normal! " . room . "\<C-e>"
@@ -591,8 +588,7 @@ function! s:get_dest_ftFT_with_char(kind, c, currentline, col, count, options_di
     " up
     if opt_auto_scroll
       let winheight = winheight(0)
-      let los       = screenrow()
-      let room      = winheight - los - &scrolloff
+      let room      = winheight - screenrow() - &scrolloff
 
       if room > 0
         execute "normal! " . room . "\<C-y>"
@@ -703,7 +699,7 @@ function! s:columnmove_wbege(kind, mode, count, options_dict, command) "{{{
 
   " resolving user configuration
   let opt_fold_open      = s:user_conf(     'fold_open', a:options_dict, 0)
-  let opt_strict_wbege   = s:user_conf(  'strict_wbege', a:options_dict, 0)
+  let opt_strict_wbege   = s:user_conf(  'strict_wbege', a:options_dict, 1)
   let opt_fold_treatment = s:user_conf('fold_treatment', a:options_dict, 0)
   let opt_raw            = s:check_raw(a:options_dict)
 
