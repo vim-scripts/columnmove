@@ -27,10 +27,9 @@ let s:null_dest = {'lnum': -1, 'col': -1, 'curswant': -1}
 "             fixer to executer or dot-repeat
 let s:last_searched = {'kind': '', 'char': '', 'dest': {}, 'args': [], 'wise': ''}
 
-" To suppress {count} times calling for executer
-" s:state == l:count        : execute moving the cursor
-" s:state <= 0 (dot-repeat) : execute moving the cursor
-" The other                 : skip
+" To distinguish whether keymapping call or dot-repeat
+" s:state == 1  : keymapping
+" s:state <= 0  : dot-repeat
 let s:state = 0
 
 " load vital
@@ -286,7 +285,7 @@ function! s:getchar_from_same_column(string, thr_col, cutup, null)  "{{{
   " NOTE: 'cutup' is the maximum number of characters which can be put within
   "       'thr_col' bytes. It should be 1 or larger.
 
-  let chars = split(a:string, '\zs')[: a:cutup-1]
+  let chars = split(a:string, '\zs')[: a:cutup]
   let len   = len(chars)
   let top   = len - 1
   let bot   = -top
@@ -351,10 +350,18 @@ endfunction
 "}}}
 
 " vertical f, t, F, T
+inoremap <Plug>(columnmove-nop) <Nop>
+nnoremap <Plug>(columnmove-nop) <Nop>
+xnoremap <Plug>(columnmove-nop) <Nop>
+
+let s:plug_cap = "\<Plug>"
+let s:cursorhold = s:plug_cap[0:1] . '`'
+unlet s:plug_cap
+
 function! s:columnmove_ftFT_fixer(kind, mode, wise, argn, args) "{{{
   " count assginment
   let l:count = (a:argn > 1 && a:args[1] > 0) ? a:args[1] : v:count1
-  let s:state = l:count
+  let s:state = 1
 
   " searching for the user configuration
   let options_dict = (a:argn > 2) ? a:args[2] : {}
@@ -407,7 +414,9 @@ function! s:columnmove_ftFT_fixer(kind, mode, wise, argn, args) "{{{
 
       let cmd = call_method . "columnmove#ftFT_executer()\<CR>"
     else
-      let cmd = (a:mode == 'o') ? "\<Esc>" : ''
+      call winrestview(view)
+      redraw
+      let cmd = (a:mode == 'o') ? "\<Esc>" : "\<Plug>(columnmove-nop)"
     endif
   endif
 
@@ -415,12 +424,6 @@ function! s:columnmove_ftFT_fixer(kind, mode, wise, argn, args) "{{{
 endfunction
 "}}}
 function! columnmove#ftFT_executer()  "{{{
-  " skip {count}
-  if !(s:state == get(s:last_searched.args, 3, 0) || s:state <= 0)
-    let s:state -= 1
-    return ''
-  endif
-
   " determine the destination
   let dest = copy(s:null_dest)
   if s:last_searched.dest != s:null_dest
@@ -486,7 +489,8 @@ function! s:get_dest_ftFT(kind, mode, count, view, opt)  "{{{
   if a:kind =~# '[ft]'
     " down
     if a:opt.auto_scroll
-      normal! zt
+      " can not use normal! zt
+      call s:auto_scroll_up()
     endif
 
     let startline = (a:kind ==# 'f') ? initline + 1 : initline + 2
@@ -507,7 +511,8 @@ function! s:get_dest_ftFT(kind, mode, count, view, opt)  "{{{
   elseif a:kind =~# '[FT]'
     " up
     if a:opt.auto_scroll
-      normal! zb
+      " can not use normal! zb
+      call s:auto_scroll_down()
     endif
 
     let startline = (a:kind ==# 'F') ? initline - 1 : initline - 2
@@ -610,7 +615,11 @@ function! s:get_dest_ftFT(kind, mode, count, view, opt)  "{{{
   endif
 
   " target character assginment
-  let key = nr2char(getchar())
+  while 1
+    let key = getchar()
+    if key != s:cursorhold | break | endif
+  endwhile
+  let key = type(key) == type(0) ? nr2char(key) : key
 
   " delete highlighting
   if a:opt.highlight
@@ -618,7 +627,7 @@ function! s:get_dest_ftFT(kind, mode, count, view, opt)  "{{{
     redraw
   endif
 
-  if key == "" | return [copy(s:null_dest), opened_fold] | endif
+  if key ==# "\<Esc>" || key ==# "\<C-c>" | return [copy(s:null_dest), opened_fold] | endif
 
   " update history
   if a:opt.update_history
@@ -655,7 +664,6 @@ function! s:get_dest_ftFT_with_char(kind, mode, c, count, view, opt)  "{{{
   let initline = a:view.lnum
   let col      = a:view.col    " NOTE: not equal col('.')!
   let curswant = a:view.curswant
-  let cutup    = max([virtcol, col('.')])
 
   " update history
   if a:opt.update_history
@@ -712,6 +720,7 @@ function! s:get_dest_ftFT_with_char(kind, mode, c, count, view, opt)  "{{{
   let acceptable_gap = char_width - 1
   let curswant       = (curswant - virtcol + char_width <= acceptable_gap)
         \            ? curswant : (virtcol - char_width)
+  let cutup          = max([virtcol, col('.')]) + acceptable_gap
 
   " searching for the destination
   let idx      = 0
@@ -797,6 +806,101 @@ function! s:highlight_del(id) "{{{
   return matchdelete(a:id)
 endfunction
 "}}}
+function! s:auto_scroll_up()  "{{{
+  let current = line('.')
+  let viewtop = line('w0')
+  let lineend = line('$')
+  let winline = winline()
+  let offset  = &scrolloff
+
+  if current - viewtop <= offset
+    return
+  endif
+
+  let lnum = viewtop
+  let winheight = winheight(0)
+  let aim  = winline + winheight - 1
+  let lines = []
+  while aim > 0
+    let fold_end = foldclosedend(lnum)
+    let lines += [lnum]
+
+    if fold_end < 0
+      let lnum += 1
+    else
+      let lnum = fold_end + 1
+    endif
+
+    if lnum >= lineend
+      break
+    endif
+
+    let aim -= 1
+  endwhile
+
+  let idx = 0
+  for line in lines
+    if line >= current
+      break
+    endif
+    let idx += 1
+  endfor
+
+  if len(lines) - idx + offset >= winheight
+    let topline = lines[idx - offset]
+    call winrestview({'topline': topline})
+    redraw
+  endif
+  return
+endfunction
+"}}}
+function! s:auto_scroll_down()  "{{{
+  let current = line('.')
+  let viewbot = line('w$')
+  let winline = winline()
+  let offset  = &scrolloff
+
+  if viewbot - current <= offset
+    return
+  endif
+
+  let lnum = viewbot
+  let winheight = winheight(0)
+  let aim  = 2*winheight - winline
+  let lines = []
+  while aim > 0
+    let fold_end = foldclosed(lnum)
+    let lines += [lnum]
+
+    if fold_end < 0
+      let lnum -= 1
+    else
+      let lnum = fold_end - 1
+    endif
+
+    if lnum <= 1
+      break
+    endif
+
+    let aim -= 1
+  endwhile
+
+  let idx = 0
+  for line in lines
+    if line <= current
+      break
+    endif
+    let idx += 1
+  endfor
+
+  if winheight - idx + offset <= len(lines)
+    let topline = lines[idx + winheight - offset - 1]
+    call winrestview({'topline': topline})
+    redraw
+  endif
+  return
+endfunction
+"}}}
 
 " vertical w, b, e, ge, W, B, E, gE
 function! s:columnmove_wbege(kind, mode, wise, argn, args) "{{{
@@ -851,7 +955,6 @@ function! s:get_dest_wbege(kind, count, view, opt)  "{{{
   let initline    = a:view.lnum
   let col         = a:view.col    " NOTE: not equal col('.')!
   let curswant    = a:view.curswant
-  let cutup       = max([virtcol, col('.')])
   let opened_fold = []
 
   if a:kind ==# 'w'
@@ -920,6 +1023,7 @@ function! s:get_dest_wbege(kind, count, view, opt)  "{{{
   let curswant       = (lines[0] == '') ? 0
         \            : (curswant - virtcol + char_width <= acceptable_gap) ? curswant
         \            : (virtcol - char_width)
+  let cutup          = max([virtcol, col('.')]) + acceptable_gap
 
   if a:opt.fold_open != 0
     " fold opening
