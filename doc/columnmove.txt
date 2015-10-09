@@ -1,6 +1,5 @@
-*columnmove.txt*	Last change:15-Aug-2014.
-
-Bring cursor vertically in similar ways as line-wise commands.
+*columnmove.txt*	Bring cursor along a column.
+						Last change:03-Oct-2015.
 
 Author  : machakann <mckn@outlook.jp>
 License : NYSL license
@@ -232,6 +231,8 @@ you expect.
 	omap     V<M-f>     V<Plug>(columnmove-f)
 	omap <C-v><M-f> <C-v><Plug>(columnmove-f)
 <
+Or using the supplementary function |columnmove#utility#map()| is easier way
+to do it.
 
 
 ------------------------------------------------------------------------------
@@ -619,36 +620,104 @@ used.  Please refer |columnmove-configuration|.
 
 
 						*columnmove#w()*
-columnmove#w(mode, wise[, target[, count[, options_dictionary]]])
+columnmove#w(mode, wise[, count[, options_dictionary]])
 	The function corresponds to |columnmove-w|.
 
 						*columnmove#b()*
-columnmove#b(mode, wise[, target[, count[, options_dictionary]]])
+columnmove#b(mode, wise[, count[, options_dictionary]])
 	The function corresponds to |columnmove-b|.
 
 						*columnmove#e()*
-columnmove#e(mode, wise[, target[, count[, options_dictionary]]])
+columnmove#e(mode, wise[, count[, options_dictionary]])
 	The function corresponds to |columnmove-e|.
 
 						*columnmove#ge()*
-columnmove#ge(mode, wise[, target[, count[, options_dictionary]]])
+columnmove#ge(mode, wise[, count[, options_dictionary]])
 	The function corresponds to |columnmove-ge|.
 
 						*columnmove#W()*
-columnmove#W(mode, wise[, target[, count[, options_dictionary]]])
+columnmove#W(mode, wise[, count[, options_dictionary]])
 	The function corresponds to |columnmove-W|.
 
 						*columnmove#B()*
-columnmove#B(mode, wise[, target[, count[, options_dictionary]]])
+columnmove#B(mode, wise[, count[, options_dictionary]])
 	The function corresponds to |columnmove-B|.
 
 						*columnmove#E()*
-columnmove#E(mode, wise[, target[, count[, options_dictionary]]])
+columnmove#E(mode, wise[, count[, options_dictionary]])
 	The function corresponds to |columnmove-E|.
 
 						*columnmove#gE()*
-columnmove#gE(mode, wise[, target[, count[, options_dictionary]]])
+columnmove#gE(mode, wise[, count[, options_dictionary]])
 	The function corresponds to |columnmove-gE|.
+
+
+------------------------------------------------------------------------------
+Supplementary function~
+
+There are many keymapping functions. They are not easy to use and the required
+description easily gets tremendous in exchange of the degree of freedom. To
+alleviate the situation there is a supplementary function to make keymappings
+for several modes automatically.
+
+						*columnmove#utility#map()*
+columnmove#utility#map(mode, kind, lhs[, motionwise])
+
+columnmove#utility#map(mode, '[ftFT,;]', lhs
+		\ [, motionwise[, target, [, count[, options_dictionary]]]])
+
+columnmove#utility#map(mode, '[wbeWbe]' || 'g[eE]', lhs
+		\ [, motionwise[, count[, options_dictionary]]])
+
+	This function is used in order to simplify the description of
+	keymapping declarations.
+>
+	nnoremap <silent><expr>      \f columnmove#f('n', '')
+	xnoremap <silent><expr>      \f columnmove#f('x', '')
+	onoremap <silent><expr>      \f columnmove#f('o', 'V')
+	onoremap <silent><expr>     v\f columnmove#f('o', '')
+	onoremap <silent><expr>     V\f columnmove#f('o', 'V')
+	onoremap <silent><expr> <C-v>\f columnmove#f('o', "<Bslash><lt>C-v>")
+
+	" The above descriptions could be replaced by the line
+	call columnmove#utility#map('nxo', 'f', '\f')
+<
+	For example, Alt key is not valid to use in cui environment, use this
+	function with |g:columnmove_no_default_key_mappings|.
+>
+	let g:columnmove_no_default_key_mappings = 1
+	call columnmove#utility#map('nxo', 'f', '\f')
+	call columnmove#utility#map('nxo', 'F', '\F')
+	call columnmove#utility#map('nxo', ';', '\;')
+	call columnmove#utility#map('nxo', ',', '\,')
+	call columnmove#utility#map('nxo', 'w', '\w')
+	call columnmove#utility#map('nxo', 'b', '\b')
+	call columnmove#utility#map('nxo', 'e', '\e')
+<
+	Some user might prefer to change "motionwise" to "block".
+>
+	call columnmove#utility#map('nxo', 'f', '\f', 'block')
+
+	" press d\fh
+	" a#c        ac
+	" def   ->   df     #:cursor
+	" ghi        g#
+<
+	The first argument "mode" is a string contains 'n', 'x', 'o' and 'i'
+	depending user's needs. The second argument "kind" is the string to
+	specify the columnmove command. 'f', 'F', 't', 'T', ';', ',', 'w',
+	'b', 'e', "ge", 'W', 'B', 'E', "gE" can be used. The third argument
+	"lhs" is treated as {lhs} of |:map| command. The fourth argument
+	"motionwise" is optional, this argument assigns the default motionwise
+	in operator-pending mode.
+
+		|characterwise|: 'v' or "char" (inclusive) or '' (exclusive)
+		|linewise|     : 'V' or "line"
+		blockwise    : "\<C-v>" or "block"
+
+	The following optional arguments "target",
+	"count", "options_dictionary" are same as |columnmove#f()| and
+	|columnmove#w()|.
 
 
 ==============================================================================
